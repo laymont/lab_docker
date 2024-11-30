@@ -1,0 +1,84 @@
+services:
+  mysql:
+    image: mysql:latest
+    container_name: my_mysql
+    networks:
+      lab_docker:
+        ipv4_address: 10.10.10.2
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: wordpress
+      MYSQL_USER: wpuser
+      MYSQL_PASSWORD: wppassword
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  postgres:
+    image: postgres:latest
+    container_name: my_postgres
+    networks:
+      lab_docker:
+        ipv4_address: 10.10.10.3
+    environment:
+      POSTGRES_USER: miusuario
+      POSTGRES_PASSWORD: miclave
+      POSTGRES_DB: midatabase
+
+  php-fpm:
+    image: php:8.1-fpm
+    container_name: my_php_fpm
+    networks:
+      lab_docker:
+        ipv4_address: 10.10.10.4
+    volumes:
+      - ./html:/app/apiweb/public  # Ajustado para coincidir con el nginx.conf
+
+  nginx:
+    image: nginx:latest
+    container_name: my_nginx
+    networks:
+      lab_docker:
+        ipv4_address: 10.10.10.5
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./html:/app/apiweb/public  # Asegúrate de que coincida con tu configuración
+      - ./log:/log  # Montar un volumen para los logs
+    ports:
+      - "8081:8081"  # Mapea el puerto 8081
+    depends_on:
+      - php-fpm
+
+  wordpress:
+    image: wordpress:latest
+    container_name: wordpress
+    networks:
+      lab_docker:
+        ipv4_address: 10.10.10.6
+    environment:
+      WORDPRESS_DB_HOST: my_mysql:3306
+      WORDPRESS_DB_USER: wpuser
+      WORDPRESS_DB_PASSWORD: wppassword
+      WORDPRESS_DB_NAME: wordpress
+    ports:
+      - "8080:80"
+
+  portainer:
+    image: portainer/portainer-ce
+    container_name: portainer
+    networks:
+      lab_docker:
+        ipv4_address: 10.10.10.7
+    ports:
+      - "9000:9000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+networks:
+  lab_docker:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.10.10.0/24
+
+volumes:
+  mysql_data:
